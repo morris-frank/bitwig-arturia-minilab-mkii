@@ -4,7 +4,12 @@ host.setShouldFailOnDeprecatedUse(true);
 host.defineController("Arturia", "MiniLab mkII", "0.1", "4d871b46-0439-475e-a6f3-ee4f18658033", "morris-frank");
 host.defineMidiPorts(1, 1);
 
-host.addDeviceNameBasedDiscoveryPair(["Arturia MiniLab mkII MIDI 1"], ["Arturia MiniLab mkII MIDI 1"]);
+if (host.platformIsWindows())
+	host.addDeviceNameBasedDiscoveryPair(["Arturia MiniLab mkII"], ["Arturia MiniLab mkII"]);
+else if (host.platformIsMac())
+	host.addDeviceNameBasedDiscoveryPair(["Arturia MiniLab mkII"], ["Arturia MiniLab mkII"]);
+else if (host.platformIsLinux())
+	host.addDeviceNameBasedDiscoveryPair(["Arturia MiniLab mkII MIDI 1"], ["Arturia MiniLab mkII MIDI 1"]);
 
 var STATUS_KNOB = 176;
 
@@ -39,18 +44,32 @@ function init() {
 // Called when a short MIDI message is received on MIDI input port 0.
 function onMidi(status, key, value) {
    if (status == STATUS_KNOB) {
-      var knob = KNOBS.indexOf(key);
+      onWhiteKnobs(key, value);
+   } else {
+      printMidi(status, key, value);
+   }
+}
 
-      if (knob > 7){
-         knob -= 8;
-         controlPageCursor.getParameter(knob).setImmediately(value / 128);
-         println('L ' + knob + ': ' + value);
-      } else if (knob >= 0) {
-         println('RIGHT ' + knob + ': ' + value);
-      } else {
-         if (key == KNOB_9_CLICK) {
-            resetRemoteControl();
-         }
+function onWhiteKnobs(key, value) {
+   var knob = KNOBS.indexOf(key);
+
+   if (knob > 7){
+      knob -= 8;
+      controlPageCursor.getParameter(knob).setImmediately(value / 128);
+      println('L ' + knob + ': ' + value);
+   } else if (knob == 0) {
+      if (value > 64) {
+         controlPageCursor.selectNextPage(true);
+      } else if (value < 64){
+         controlPageCursor.selectPreviousPage(true);
+      }
+   } else if (knob == 4) {
+      println('Bottom ' + knob + ': ' + value);
+   } else if (knob >= 0) {
+      println('RIGHT ' + knob + ': ' + value);
+   } else {
+      if (key == KNOB_9_CLICK) {
+         resetRemoteControl();
       }
    }
 }
