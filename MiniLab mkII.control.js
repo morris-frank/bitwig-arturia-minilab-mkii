@@ -28,9 +28,18 @@ function init() {
    midiPort.setMidiCallback(onMidi);
    midiPort.setSysexCallback(onSysex0);
 
+   MiniLabKeys = midiPort.createNoteInput("MiniLab Keys", "80????", "90????", "B001??", "B002??", "B007??", "B00B??", "B040??", "C0????", "D0????", "E0????");
+   MiniLabKeys.setShouldConsumeEvents(true);
+
+   MiniLabPads = midiPort.createNoteInput("MiniLab Pads", "?9????");
+   MiniLabPads.setShouldConsumeEvents(true);
+   MiniLabPads.assignPolyphonicAftertouchToExpression(0, NoteExpression.TIMBRE_UP, 2);
+   // MiniLabPads.setKeyTranslationTable(emptyMap);
+
    cTrack = host.createCursorTrack(3, 0);
    deviceCursor = cTrack.createCursorDevice();
    controlPageCursor = deviceCursor.createCursorRemoteControlsPage(8);
+
 
    uControl = host.createUserControls(8);
    for (var i = 0; i < 8; i++)
@@ -45,6 +54,8 @@ function init() {
 function onMidi(status, key, value) {
    if (status == STATUS_KNOB) {
       onWhiteKnobs(key, value);
+   } else if (isNoteOn(status)) {
+      println('NoteOn');
    } else {
       printMidi(status, key, value);
    }
@@ -56,7 +67,6 @@ function onWhiteKnobs(key, value) {
    if (knob > 7){
       knob -= 8;
       controlPageCursor.getParameter(knob).setImmediately(value / 128);
-      println('L ' + knob + ': ' + value);
    } else if (knob == 0) {
       if (value > 64) {
          controlPageCursor.selectNextPage(true);
@@ -68,15 +78,13 @@ function onWhiteKnobs(key, value) {
    } else if (knob >= 0) {
       println('RIGHT ' + knob + ': ' + value);
    } else {
-      if (key == KNOB_9_CLICK) {
-         resetRemoteControl();
-      }
    }
 }
 
 // Called when a MIDI sysex message is received on MIDI input port 0.
 function onSysex0(data) {
    // MMC Transport Controls:
+   println(data);
    switch (data) {
       case "f07f7f0605f7":
          transport.rewind();
